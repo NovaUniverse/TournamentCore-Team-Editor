@@ -38,35 +38,7 @@ $(function () {
 			$("#add_player_username").val("");
 			$("#player_preview_div").hide();
 
-			let newPlayer = $("#player_tr_template").clone();
-
-			newPlayer.removeAttr('id');
-			newPlayer.addClass("player-tr");
-
-			newPlayer.attr("data-uuid", addPlayerUUID);
-			newPlayer.attr("data-username", addPlayerUUID);
-
-			newPlayer.find(".player-uuid").text(addPlayerUUID);
-			newPlayer.find(".player-username").text(addPlayerUsername);
-
-			newPlayer.find(".player-avatar").attr("src", "https://crafatar.com/avatars/" + addPlayerUUID);
-
-			newPlayer.find(".btn-remove-player").on("click", function () {
-				$(this).parent().parent().remove();
-			});
-
-			newPlayer.find(".player-team-select").on("change", function () {
-				let value = $(this).children("option:selected").val();
-
-				$(this).parent().attr("data-sort-value", value);
-				$(this).parent().parent().attr("data-team-number", value);
-
-				$(this).parent().updateSortVal(value);
-
-				sortTable();
-			});
-
-			$("#player_thead").append(newPlayer);
+			addPlayer(addPlayerUUID, addPlayerUsername, -1);
 
 			$("#player_preview_div").hide();
 			addPlayerUUID = null;
@@ -120,6 +92,40 @@ $(function () {
 	sortTable();
 });
 
+function addPlayer(uuid, username, teamNumber) {
+	let newPlayer = $("#player_tr_template").clone();
+
+	newPlayer.removeAttr('id');
+	newPlayer.addClass("player-tr");
+
+	newPlayer.attr("data-uuid", uuid);
+	newPlayer.attr("data-username", username);
+
+	newPlayer.find(".player-uuid").text(uuid);
+	newPlayer.find(".player-username").text(username);
+
+	newPlayer.find(".player-avatar").attr("src", "https://crafatar.com/avatars/" + uuid);
+
+	newPlayer.find(".btn-remove-player").on("click", function () {
+		$(this).parent().parent().remove();
+	});
+
+	newPlayer.find(".player-team-select").val(teamNumber).change();
+
+	newPlayer.find(".player-team-select").on("change", function () {
+		let value = $(this).children("option:selected").val();
+
+		$(this).parent().attr("data-sort-value", value);
+		$(this).parent().parent().attr("data-team-number", value);
+
+		$(this).parent().updateSortVal(value);
+
+		sortTable();
+	});
+
+	$("#player_thead").append(newPlayer);
+}
+
 function searchPlayer() {
 	let username = $("#add_player_username").val();
 
@@ -165,11 +171,21 @@ function exportJSON() {
 	$("#json_export_modal").modal('show');
 }
 
-function print_r(object,html){
-    if(html) return '<pre>' +  JSON.stringify(object, null, 4) + '</pre>';
-    else return JSON.stringify(object, null, 4);
-}  
+function print_r(object, html) {
+	if (html) return '<pre>' + JSON.stringify(object, null, 4) + '</pre>';
+	else return JSON.stringify(object, null, 4);
+}
 
+
+function loadData(data) {
+	$(".player-tr").remove();
+
+	for (let i = 0; i < data.length; i++) {
+		let player = data[i];
+
+		addPlayer(player.uuid, player.username, player.team_number);
+	}
+}
 
 function getData() {
 	let data = [];
