@@ -1,176 +1,112 @@
-var sendTarget = "all";
+const TEAM_COUNT = 12;
+
+var addPlayerUUID = null;
+var addPlayerUsername = null;
+
+var sortDirection = true;
 
 $(function () {
-	$("#btn_send_all_players_to").on("click", function () {
-		sendTarget = "all";
-		$('#select_server_modal').modal('show');
+	for (let i = 1; i <= TEAM_COUNT; i++) {
+		$(".player-team-select").append(new Option("Team " + i, i));
+	}
+
+	$("#btn_add_player_open").on("click", function () {
+		$('#add_player_modal').modal('show');
+		setTimeout(function () {
+			$("#add_player_username").trigger('focus');
+		}, 500);
 	});
 
-	$("#btn_select_server_send").on("click", function () {
-		let serverName = $('#select_server option:selected').val();
+	$("#btn_search_player").on("click", function () {
+		searchPlayer();
+	});
 
-		console.log("Target server: " + serverName);
+	$("#add_player_username").on("input propertychange paste", function () {
+		$("#player_preview_div").hide();
+		$("#btn_add_player").prop('disabled', true);
+		addPlayerUUID = null;
+		addPlayerUsername = null;
+	});
 
-		if (sendTarget == "all") {
-			$.getJSON("/api/send_players?server=" + encodeURIComponent(serverName), function (data) {
-				console.log(data);
-				if (data.success) {
-					$('#select_server_modal').modal('hide');
-					showMessage("Success");
-				} else {
-					showError(data.message);
-				}
-			});
+	$("#btn_add_player").on("click", function () {
+		if ($('.player-tr[data-uuid="' + addPlayerUUID + '"]').length > 0) {
+			showError("That player has already been added");
 		} else {
-			$.getJSON("/api/send_player?server=" + encodeURIComponent(serverName) + "&player=" + encodeURIComponent(sendTarget), function (data) {
-				console.log(data);
-				if (data.success) {
-					$('#select_server_modal').modal('hide');
-					showMessage("Success");
-				} else {
-					showError(data.message);
-				}
+			$("#btn_add_player").prop('disabled', true);
+			//console.log("add player " + addPlayerUUID + " " + addPlayerUsername);
+
+			$("#add_player_username").val("");
+			$("#player_preview_div").hide();
+
+			addPlayer(addPlayerUUID, addPlayerUsername, -1);
+
+			$("#player_preview_div").hide();
+			addPlayerUUID = null;
+			addPlayerUsername = null;
+			$('#add_player_modal').modal('hide');
+
+			$("#player_table").stupidtable_build();
+			sortTable();
+
+			setTimeout(function () {
+				$("#btn_add_player_open").trigger('focus');
+			}, 100);
+		}
+	});
+
+	$("#add_player_username").on("keypress", function (e) {
+		if (e.key == "Enter") {
+			searchPlayer();
+		}
+	});
+
+	$("#col_team_number").on("click", function () {
+		sortDirection = !sortDirection;
+		sortTable();
+	});
+
+	$("#btn_export_json").on("click", function () {
+		exportJSON();
+	});
+
+	$("#btn_download_json").on("click", function () {
+		var dataStr = "data:text/json;charset=utf-8," + encodeURIComponent($("#json_output").text());
+		var downloadAnchorNode = document.createElement('a');
+		downloadAnchorNode.setAttribute("href", dataStr);
+		downloadAnchorNode.setAttribute("download", "teams.json");
+		document.body.appendChild(downloadAnchorNode); // required for firefox
+		downloadAnchorNode.click();
+		downloadAnchorNode.remove();
+	});
+
+	$("#player_preview_div").hide();
+	$(".sort-direction").hide();
+
+	$("#player_table").stupidtable();
+
+	$("#player_table").on('aftertablesort', function (event, data) {
+		$(".sort-direction").hide();
+		$(".sort-direction-" + data.direction).show();
+	});
+
+	sortTable();
+
+	try {
+		let exportCookie = getCookie("exported_team_data");
+
+		if(exportCookie.length > 0) {
+			let teamData = JSON.parse(exportCookie);
+
+			teamData.forEach(element => {
+				addPlayer(element.uuid, element.username, element.team_number);
 			});
 		}
-	});
+	} catch (err) {
+		console.error(err);
+	}
 
-	$("#link_team_editor").on("click", function () {
-		$.getJSON("/api/export_team_data", function (data) {
-			setCookie("exported_team_data", JSON.stringify(data.teams_data), 1);
-			
-			window.open("/app/team_editor/");
-		});
-	});
-
-	$("#link_start_game").on("click", function () {
-		$('#start_game_modal').modal('show');
-	});
-
-	$("#link_reset_data").on("click", function () {
-		$('#reset_modal').modal('show');
-	});
-
-	$("#link_broadcast_message").on("click", function () {
-		$('#broadcast_modal').modal('show');
-	});
-
-	$("#btn_broadcast").on("click", function () {
-		runBroadcast();
-	})
-
-	$("#btn_reset").on("click", function () {
-		if (confirm("You are about to reset the score and game data!!!")) {
-			$.getJSON("/api/reset", function (data) {
-				if (data.success) {
-					showMessage("Game and score data cleared");
-				} else {
-					showError(data.message);
-				}
-			});
-		}
-
-		$('#reset_modal').modal('hide');
-	})
-
-	$("#btn_start_game").on("click", function () {
-		$.getJSON("/api/start_game", function (data) {
-			//console.log(data);
-			if (data.success) {
-				$('#start_game_modal').modal('hide');
-				showMessage("Game start request sent");
-			} else {
-				showError(data.message);
-			}
-		});
-	});
-
-	$.getJSON("/api/status", function (data) {
-		console.log(data);
-		for (let i = 0; i < data.servers.length; i++) {
-			let server = data.servers[i];
-			//console.log(server);
-
-			/*$("#select_server").append(
-				$("<option></option>").text(server.name).attr('value', server.name)
-			)*/
-			$("#select_server").append(new Option(server.name, server.name));
-		}
-
-		$("#tournament_name").text(data.tournament_name);
-		$("#proxy_software").text(data.proxy_software);
-		$("#proxy_software_version").text(data.proxy_software_version);
-		$("#available_processors").text(data.available_processors);
-	});
-
-	setInterval(function () {
-		update();
-	}, 1000);
-
-	update();
+	setCookie("exported_team_data", "", 0);
 });
-
-function update() {
-	$.getJSON("/api/status", function (data) {
-		let uuidList = [];
-
-		for (let i = 0; i < data.players.length; i++) {
-			let player = data.players[i];
-			//console.log(player);
-
-			let uuid = player.uuid;
-
-			uuidList.push(uuid);
-
-			let playerExists = $('.player-tr[data-uuid="' + uuid + '"]').length > 0;
-
-			let playerObject = null;
-
-			if (playerExists) {
-				playerObject = $('.player-tr[data-uuid="' + uuid + '"]')
-			} else {
-				let newPlayer = $("#player_template").clone();
-				newPlayer.removeAttr('id');
-				newPlayer.addClass("player-tr-real");
-				newPlayer.attr("data-uuid", uuid);
-
-				$("#players_tbody").append(newPlayer);
-
-				playerObject = newPlayer;
-
-				newPlayer.find(".btn-send-player-to").on("click", function () {
-					let uuid = $(this).parent().parent().data("uuid");
-
-					sendTarget = uuid;
-
-					console.log("UUID is: " + uuid);
-					$('#select_server_modal').modal('show');
-				});
-			}
-
-			playerObject.find(".player-server").text(player.server);
-			playerObject.find(".player-username").text(player.name);
-			playerObject.find(".player-uuid").text(player.uuid);
-
-			playerObject.find(".player-score").text(player.score);
-			playerObject.find(".player-kills").text(player.kills);
-			playerObject.find(".player-team-score").text(player.team_score);
-
-			let team = player.team_number == -1 ? "None" : "Team " + player.team_number;
-
-			playerObject.find(".player-team").text(team);
-		}
-
-		//console.log(uuidList);
-
-		$(".player-tr-real").each(function () {
-			let uuid = $(this).data("uuid");
-
-			if (!uuidList.includes(uuid)) {
-				$(this).remove();
-			}
-		});
-	});
-}
 
 function setCookie(cname, cvalue, exdays) {
 	var d = new Date();
@@ -194,17 +130,138 @@ function getCookie(cname) {
 	return "";
 }
 
+function addPlayer(uuid, username, teamNumber) {
+	let newPlayer = $("#player_tr_template").clone();
+
+	newPlayer.removeAttr('id');
+	newPlayer.addClass("player-tr");
+
+	newPlayer.attr("data-uuid", uuid);
+	newPlayer.attr("data-username", username);
+
+	newPlayer.find(".player-uuid").text(uuid);
+	newPlayer.find(".player-username").text(username);
+
+	newPlayer.find(".player-avatar").attr("src", "https://crafatar.com/avatars/" + uuid);
+
+	newPlayer.find(".btn-remove-player").on("click", function () {
+		$(this).parent().parent().remove();
+	});
+
+	newPlayer.find(".player-team-select").val(teamNumber).change();
+
+	newPlayer.find(".player-team-select").on("change", function () {
+		let value = $(this).children("option:selected").val();
+
+		$(this).parent().attr("data-sort-value", value);
+		$(this).parent().parent().attr("data-team-number", value);
+
+		$(this).parent().updateSortVal(value);
+
+		sortTable();
+	});
+
+	$("#player_thead").append(newPlayer);
+}
+
+function searchPlayer() {
+	let username = $("#add_player_username").val();
+
+	if (username.length > 0) {
+		$.getJSON("https://api.minetools.eu/uuid/" + username, function (data) {
+			//console.log(data);
+			if (data.status == "OK") {
+				let uuid = fixUUID(data.id);
+				//console.log("The uuid of " + username + " is " + uuid);
+				$.getJSON("https://api.minetools.eu/profile/" + uuid, function (profileData) {
+					let realUsername = profileData.decoded.profileName;
+
+					//console.log("The real username is " + realUsername);
+
+					$("#preview_image").attr("src", "https://crafatar.com/avatars/" + uuid);
+					$("#preview_uuid").text(uuid);
+					$("#preview_username").text(realUsername);
+
+					addPlayerUUID = uuid;
+					addPlayerUsername = realUsername;
+
+					$("#btn_add_player").prop('disabled', false);
+
+					$("#player_preview_div").show();
+
+					$("#btn_add_player").trigger('focus');
+				});
+			} else {
+				showError("Could not find player");
+			}
+		});
+	} else {
+		showError("Please provide a username");
+	}
+}
+
+function exportJSON() {
+	let data = getData();
+	console.log(data);
+	var hlt = hljs.highlight('json', print_r(data));
+	$("#json_output").html(hlt.value)
+
+	$("#json_export_modal").modal('show');
+}
+
+function print_r(object, html) {
+	if (html) return '<pre>' + JSON.stringify(object, null, 4) + '</pre>';
+	else return JSON.stringify(object, null, 4);
+}
+
+
+function loadData(data) {
+	$(".player-tr").remove();
+
+	for (let i = 0; i < data.length; i++) {
+		let player = data[i];
+
+		addPlayer(player.uuid, player.username, player.team_number);
+	}
+}
+
+function getData() {
+	let data = [];
+
+	$(".player-tr").each(function () {
+		let uuid = $(this).data("uuid");
+		let username = $(this).data("username");
+		let teamNumber = $(this).data("team-number");
+
+		data.push({
+			uuid: uuid,
+			username: username,
+			team_number: teamNumber
+		});
+	});
+
+	return data;
+}
+
+function sortTable() {
+	$("#col_team_number").stupidsort(sortDirection ? "asc" : "desc");
+}
+
+function fixUUID(uuid) {
+	return uuid.substr(0, 8) + "-" + uuid.substr(8, 4) + "-" + uuid.substr(12, 4) + "-" + uuid.substr(16, 4) + "-" + uuid.substr(20);
+}
+
 function showInfo(message) {
-	showMessageWithIcon(message, "info", "./img/outline-info-24px.svg");
+	showMessage(message, "info");
 }
 
 function showWarning(message) {
-	showMessageWithIcon(message, "warning", "./img/outline-warning-24px.svg");
+	showMessage(message, "warning");
 }
 
 function showError(message) {
 	console.warn(message);
-	showMessageWithIcon(message, "danger", "./img/outline-error_outline-24px.svg");
+	showMessage(message, "danger");
 }
 
 function showMessage(message, type) {
@@ -216,32 +273,4 @@ function showMessage(message, type) {
 		delay: 3000,
 		z_index: 1337
 	});
-}
-
-function showMessageWithIcon(message, type, icon) {
-	$.notify({
-		icon: icon,
-		message: "&nbsp;" + message
-	}, {
-		type: type,
-		icon_type: "img",
-		allow_dismiss: true,
-		delay: 3000,
-		z_index: 1337
-	});
-}
-
-function runBroadcast() {
-	let text = $("#broadcast_text_message").val();
-
-	$.getJSON("/api/broadcast?message=" + encodeURIComponent(text), function (data) {
-		if (data.success) {
-			showMessage("Message sent");
-			$("#broadcast_text_message").val("");
-		} else {
-			showError(data.message);
-		}
-	});
-
-	$('#broadcast_modal').modal('hide');
 }
