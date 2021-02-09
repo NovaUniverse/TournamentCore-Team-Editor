@@ -111,26 +111,20 @@ $(function () {
 
 	sortTable();
 
-	try {
-		let exportCookie = getCookie("exported_team_data");
-
-		if (exportCookie.length > 0) {
-			let teamData = JSON.parse(exportCookie);
-
-			teamData.forEach(element => {
-				addPlayer(element.uuid, element.username, element.team_number);
-			});
-		}
-	} catch (err) {
-		console.error(err);
-	}
-
 	setCookie("exported_team_data", "", 0);
 
 	$.getJSON("/api/status", function (data) {
 		console.log("It seems like the team editor is running on the same web server as TournamentCore");
 		$("#back_to_admin_li").show();
 		$("#btn_upload_team_data").show();
+
+		$.getJSON("/api/export_team_data", function (data) {
+			data.teams_data.forEach(element => {
+				addPlayer(element.uuid, element.username, element.team_number);
+			});
+			
+			showInfo("Team data loaded from TournamentCore");
+		});
 	});
 
 	$("#link_back_to_admin").on("click", function () {
