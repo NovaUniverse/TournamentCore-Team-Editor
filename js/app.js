@@ -122,7 +122,7 @@ $(function () {
 			data.teams_data.forEach(element => {
 				addPlayer(element.uuid, element.username, element.team_number);
 			});
-			
+
 			showInfo("Team data loaded from TournamentCore");
 		});
 	});
@@ -131,6 +131,53 @@ $(function () {
 		if (confirm("Any unsaved changes will be lost!")) {
 			window.location = "/app/";
 		}
+	});
+
+	$("#link_import_team").on("click", function () {
+		$("#import_team_modal").modal('show');
+	});
+
+	$("#json_file_uppload").on("change", function () {
+		let files = $("#json_file_uppload").get(0).files;
+
+		//console.log(files);
+
+		if (files.length > 0) {
+			let f = files[0];
+
+			let reader = new FileReader();
+
+			reader.onload = (function (theFile) {
+				return function (e) {
+					jQuery('#team_json_data').val(e.target.result);
+				};
+			})(f);
+
+			reader.readAsText(f)
+		} else {
+			console.log("No file selected");
+		}
+	});
+
+	$("#btn_import_team").on("click", function () {
+		try {
+			let jsonData = JSON.parse($("#team_json_data").val());
+
+			loadData(jsonData);
+
+			$("#import_team_modal").modal('hide');
+
+			$("#team_json_data").val("");
+			$("#json_file_uppload").val("");
+		} catch (err) {
+			showError("Invalid JSON provided. Check if the data is valid and try again");
+			console.error(err);
+		}
+	});
+
+	$("#btn_cancel_import_team").on("click", function () {
+		$("#team_json_data").val("");
+		$("#json_file_uppload").val("");
 	});
 
 	$(".hidden-until-loaded").removeClass("hidden-until-loaded");
