@@ -6,3 +6,7 @@
 .clickable {
 	cursor: pointer;
 }
+
+.hidden-until-loaded {
+	display: none;
+}

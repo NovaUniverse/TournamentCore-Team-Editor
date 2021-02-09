@@ -26,9 +26,17 @@
 				aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
 				<span class="navbar-toggler-icon"></span>
 			</button>
+
+			<div class="collapse navbar-collapse" id="navbarNavDropdown">
+				<ul class="navbar-nav">
+					<li class="nav-item hidden-until-loaded" id="back_to_admin_li">
+						<a class="nav-link" href="#" id="link_back_to_admin">Back to admin ui</a>
+					</li>
+				</ul>
+			</div>
 		</div>
 	</nav>
-
+	
 	<div class="mx-2">
 		<table class="table table-striped table-bordered table-hover my-2" id="player_table">
 			<thead>
@@ -68,6 +76,7 @@
 				</div>
 				<div class="modal-footer">
 					<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+					<button type="button" class="btn btn-info hidden-until-loaded" id="btn_upload_team_data">Upload to TournamentCore</button>
 					<button type="button" id="btn_download_json" class="btn btn-primary">Download</button>
 				</div>
 			</div>

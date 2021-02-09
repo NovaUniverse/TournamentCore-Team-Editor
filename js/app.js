@@ -6,6 +6,9 @@ var addPlayerUsername = null;
 var sortDirection = true;
 
 $(function () {
+	$("#back_to_admin_li").hide();
+	$("#btn_upload_team_data").hide();
+
 	for (let i = 1; i <= TEAM_COUNT; i++) {
 		$(".player-team-select").append(new Option("Team " + i, i));
 	}
@@ -89,12 +92,29 @@ $(function () {
 		$(".sort-direction-" + data.direction).show();
 	});
 
+	$("#btn_upload_team_data").on("click", function () {
+		$.ajax({
+			type: "POST",
+			url: "/api/uppload_team",
+			data: $("#json_output").text(),
+			success: function (data) {
+				console.log(data);
+				if (data.success) {
+					showMessage("Team upploaded to TournamentCore");
+				} else {
+					showError("Failed to uppload team\n" + data.message);
+				}
+			},
+			dataType: "json"
+		});
+	})
+
 	sortTable();
 
 	try {
 		let exportCookie = getCookie("exported_team_data");
 
-		if(exportCookie.length > 0) {
+		if (exportCookie.length > 0) {
 			let teamData = JSON.parse(exportCookie);
 
 			teamData.forEach(element => {
@@ -106,6 +126,20 @@ $(function () {
 	}
 
 	setCookie("exported_team_data", "", 0);
+
+	$.getJSON("/api/status", function (data) {
+		console.log("It seems like the team editor is running on the same web server as TournamentCore");
+		$("#back_to_admin_li").show();
+		$("#btn_upload_team_data").show();
+	});
+
+	$("#link_back_to_admin").on("click", function () {
+		if (confirm("Any unsaved changes will be lost!")) {
+			window.location = "/app/";
+		}
+	});
+
+	$(".hidden-until-loaded").removeClass("hidden-until-loaded");
 });
 
 function setCookie(cname, cvalue, exdays) {
