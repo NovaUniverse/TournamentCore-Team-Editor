@@ -223,8 +223,6 @@ function addPlayer(uuid, username, teamNumber) {
 		$(this).parent().parent().remove();
 	});
 
-	newPlayer.find(".player-team-select").val(teamNumber).change();
-
 	newPlayer.find(".player-team-select").on("change", function () {
 		let value = $(this).children("option:selected").val();
 
@@ -237,6 +235,8 @@ function addPlayer(uuid, username, teamNumber) {
 	});
 
 	$("#player_thead").append(newPlayer);
+
+	newPlayer.find(".player-team-select").val(teamNumber).change();
 }
 
 function searchPlayer() {
@@ -304,9 +304,9 @@ function getData() {
 	let data = [];
 
 	$(".player-tr").each(function () {
-		let uuid = $(this).data("uuid");
-		let username = $(this).data("username");
-		let teamNumber = $(this).data("team-number");
+		let uuid = $(this).attr("data-uuid");
+		let username = $(this).attr("data-username");
+		let teamNumber = $(this).attr("data-team-number");
 
 		data.push({
 			uuid: uuid,
